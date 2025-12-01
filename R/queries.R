@@ -138,6 +138,64 @@ get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts
 }
 
 
+#' Makes a request against the \code{api/user_id/workouts/} endpoint
+#'
+#'
+#' Lists requested number of workouts for a user, along with some metadata.
+#'
+#' @export
+#' @param userid userID
+#' @param num_workouts num_workouts
+#' @param ... Other arguments passed on to methods
+#' @examples
+#' \dontrun{
+#' get_all_workouts()
+#' }
+#'
+get_all_workouts2 <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts = 100, max_pages = Inf) {
+  uid <- peloton_user_id()
+  
+  page <- 0L
+  all_items <- list()
+  
+  repeat {
+    page <- page + 1L
+    
+    dat <- peloton_api(
+      paste0("/api/user/", uid, "/workouts"),
+      query = list(
+        limit = num_workouts,
+        page = page
+        # you can add joins/filters here if needed
+      )
+    )
+    
+    items <- dat$data
+    if (length(items) == 0) break
+    
+    all_items[[length(all_items) + 1L]] <- items
+    
+    if (!is.null(dat$page_count) && page >= dat$page_count) break
+    if (page >= max_pages) break
+  }
+  
+  if (length(all_items) == 0) {
+    return(tibble())
+  }
+  
+  workouts_raw <- dplyr::bind_rows(all_items)
+  
+  # Basic cleanup similar to pelotonR
+  workouts <- workouts_raw |>
+    dplyr::mutate(
+      start_time = lubridate::as_datetime(start_time),
+      end_time   = lubridate::as_datetime(end_time),
+      created_at = lubridate::as_datetime(created_at)
+    )
+  
+  workouts
+}
+
 
 #' Makes a request against the \code{api/workout/workout_id} endpoint
 #'
