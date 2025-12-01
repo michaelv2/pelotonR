@@ -9,12 +9,11 @@
 #' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
-#' peloton_auth()
 #' get_my_info()
 #' }
 #'
 get_my_info <- function(dictionary = NULL, parse_dates = TRUE, ...) {
-  resp <- peloton_api("api/me", ...)$content
+  resp <- peloton_api("/api/me", ...)
   parse_list_to_df(resp, parse_dates = parse_dates, dictionary = dictionary)
 }
 
@@ -44,12 +43,12 @@ get_my_info <- function(dictionary = NULL, parse_dates = TRUE, ...) {
 get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("list" = c("seconds_since_pedaling_start", "segment_list")), parse_dates = TRUE, ...) {
   purrr::map_df(workout_ids, function(workout_id) {
     resp <- peloton_api(
-      path = glue::glue("api/workout/{workout_id}/performance_graph"),
+      path = glue::glue("/api/workout/{workout_id}/performance_graph"),
       query = list(
         every_n = every_n
       ),
       ...
-    )$content
+    )
 
     parse_list_to_df(resp, dictionary = dictionary, parse_dates = parse_dates) %>%
       dplyr::mutate(
@@ -73,7 +72,6 @@ get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("
 #' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
-#' peloton_auth()
 #' get_all_workouts()
 #' get_all_workouts(joins = "ride,ride.instructor")
 #' # if you run into parsing errors, sometimes helpful to manual override
@@ -90,13 +88,22 @@ get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts
   if (length(joins) > 1 || !is.character(joins)) stop("Provide joins as a length one character vector", call. = FALSE)
 
   # see if joins is provided, if so, append to request
-  if (joins != "") joins <- glue::glue("joins={joins}")
+  workout_query <- list(
+    limit = num_workouts,
+    page = 0
+  )
 
-  workouts <- peloton_api(glue::glue("/api/user/{userid}/workouts?{joins}&limit={num_workouts}&page=0"), ...)
-  n_workouts <- length(workouts$content$data)
+  if (joins != "") workout_query$joins <- joins
+
+  workouts <- peloton_api(
+    glue::glue("/api/user/{userid}/workouts"),
+    query = workout_query,
+    ...
+  )
+  n_workouts <- length(workouts$data)
   # v2_total_video_buffering_seconds v2_total_video_watch_time_seconds
   if (n_workouts > 0) {
-    workouts <- purrr::map_df(1:n_workouts, ~ parse_list_to_df(workouts$content$data[[.]], dictionary = dictionary, parse_dates = parse_dates))
+    workouts <- purrr::map_df(1:n_workouts, ~ parse_list_to_df(workouts$data[[.]], dictionary = dictionary, parse_dates = parse_dates))
 
     # IF JOIN PARAM is specified, get data out for ride list and add it to that row
     if (joins != "") {
@@ -148,7 +155,7 @@ get_workouts_data <- function(workout_ids, dictionary = list(
                                 "list" = c("achievement_templates")
                               ), parse_dates = TRUE, ...) {
   purrr::map_df(workout_ids, function(workout_id) {
-    resp <- peloton_api(path = glue::glue("api/workout/{workout_id}"), ...)$content
+    resp <- peloton_api(path = glue::glue("/api/workout/{workout_id}"), ...)
     parse_list_to_df(list = resp, dictionary = dictionary, parse_dates = parse_dates)
   })
 }

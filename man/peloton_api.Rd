@@ -2,24 +2,27 @@
 % Please edit documentation in R/peloton_api.R
 \name{peloton_api}
 \alias{peloton_api}
-\title{Makes a \code{GET} request against one of Peloton's API endpoints}
+\title{Make a GET request against one of Peloton's API endpoints}
 \usage{
-peloton_api(path, print_path = FALSE, ...)
+peloton_api(path, query = list(), ...)
 }
 \arguments{
-\item{path}{API endpoint to query}
+\item{path}{API endpoint to query (include the leading \code{/})}
 
-\item{print_path}{Show path/endpoint queried}
+\item{query}{Optional named list of query parameters to include}
 
-\item{...}{Additional parameters passed onto methods}
+\item{...}{Additional parameters passed on to \code{httr::GET}}
 }
 \description{
-Users need not invoke this method directly and may instead use one of the wrappers around specific endpoints that also vectorizes inputs and processes the data returned, such as \code{\link{get_my_info}},  \code{\link{get_performance_graphs}}, \code{\link{get_all_workouts}}, \code{\link{get_workouts_data}}
+Users need not invoke this method directly and may instead use one of the wrappers around specific endpoints that also vectorize
+inputs and process the data returned, such as \code{\link{get_my_info}}, \code{\link{get_performance_graphs}}, \code{\link{get_all_workouts}}, \code{\link{get_workouts_data}}.
+
+Requests are authenticated with a bearer token provided via the \code{PELOTON_BEARER_TOKEN} environment variable. You can add
+the token to your \code{~/.Renviron} file to make it available in each R session.
 }
 \examples{
 \dontrun{
-peloton_auth()
-peloton_api("api/me")
+peloton_api("/api/me")
 }
 
 }
