@@ -4,8 +4,6 @@
 #' Returns user metadata, including userid, email, account status, etc.  \code{userid} is particularly useful since you need it for \code{\link{get_workouts_data}}.
 #'
 #' @export
-#' @param dictionary A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done
-#' @param parse_dates Whether to try and guess which columns are dates and convert
 #' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
@@ -14,7 +12,23 @@
 #'
 get_my_info <- function(dictionary = NULL, parse_dates = TRUE, ...) {
   resp <- peloton_api("/api/me", ...)
-  parse_list_to_df(resp, parse_dates = parse_dates, dictionary = dictionary)
+}
+
+
+#' Makes a call to \code{\link{get_my_info}}
+#'
+#'
+#' Returns \code{userid}.
+#'
+#' @export
+#' @param ... Other arguments passed on to methods
+#' @examples
+#' \dontrun{
+#' peloton_user_id()
+#' }
+#'
+peloton_user_id <- function(...) {
+  get_my_info()$id
 }
 
 
