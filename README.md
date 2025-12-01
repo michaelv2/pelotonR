@@ -20,12 +20,7 @@ devtools::install_github("bweiher/pelotonR")
 
 #### **Authentication**
 
-You need to set environmental variables: `PELOTON_LOGIN` and `PELOTON_PASSWORD`, or provide them in this initial step, which must be run before you can issue other queries.
-
-``` r
-library(pelotonR)
-peloton_auth()
-```
+Set the `PELOTON_BEARER_TOKEN` environment variable. Adding it to your `~/.Renviron` file will make it available in each R session. No login helper is required once the token is present.
 
 #### Data Available
 
@@ -42,7 +37,7 @@ The table below documents each endpoint along with its `R` counterpart, and prov
 | api/workout/workout_id                   | `get_workouts_data()`      | data about rides                         |
 | api/user/user_id/workouts                | `get_all_workouts()`       | lists **n** workouts                     |
 
-You can show which endpoint (and arguments) are being passed on under the hood by setting the `print_path` to `TRUE` in any of the `get_` functions or in the `peloton_api` function directly.
+You can inspect helper logic directly in the package if you want to see which endpoints and query parameters are being called under the hood.
 
 #### Queries
 

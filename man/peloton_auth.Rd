@@ -2,23 +2,14 @@
 % Please edit documentation in R/peloton_auth.R
 \name{peloton_auth}
 \alias{peloton_auth}
-\title{\code{POST} credentials to Peloton's auth/login endpoint}
+\title{Deprecated Peloton authentication helper}
 \usage{
-peloton_auth(
-  login = Sys.getenv("PELOTON_LOGIN"),
-  password = Sys.getenv("PELOTON_PASSWORD")
-)
+peloton_auth(...)
 }
 \arguments{
-\item{login}{Peloton login}
-
-\item{password}{Peloton password}
+\item{...}{Ignored. Authentication now relies on the \code{PELOTON_BEARER_TOKEN} environment variable.}
 }
 \description{
-Users needs to run this each session in order to authenticate any requests made against other Pelton endpoints. Set environmental variables \code{`PELOTON_LOGIN`} and \code{`PELOTON_PASSWORD`}, or provide them yourself.
+Deprecated Peloton authentication helper
 }
-\examples{
-\dontrun{
-peloton_auth() # need to run each session to authorize any other API requests
-}
-}
+\keyword{internal}

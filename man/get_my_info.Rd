@@ -18,7 +18,6 @@ Returns user metadata, including userid, email, account status, etc.  \code{user
 }
 \examples{
 \dontrun{
-peloton_auth()
 get_my_info()
 }
 

@@ -32,7 +32,6 @@ Lists requested number of workouts for a user, along with some metadata.
 }
 \examples{
 \dontrun{
-peloton_auth()
 get_all_workouts()
 get_all_workouts(joins = "ride,ride.instructor")
 # if you run into parsing errors, sometimes helpful to manual override

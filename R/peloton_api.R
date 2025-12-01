@@ -1,56 +1,51 @@
-#' Makes a \code{GET} request against one of Peloton's API endpoints
+#' Make a GET request against one of Peloton's API endpoints
 #'
+#' Users need not invoke this method directly and may instead use one of the wrappers around specific endpoints that also
+#' vectorize inputs and process the data returned, such as \code{\link{get_my_info}}, \code{\link{get_performance_graphs}},
+#' \code{\link{get_all_workouts}}, \code{\link{get_workouts_data}}.
 #'
-#' Users need not invoke this method directly and may instead use one of the wrappers around specific endpoints that also vectorizes inputs and processes the data returned, such as \code{\link{get_my_info}},  \code{\link{get_performance_graphs}}, \code{\link{get_all_workouts}}, \code{\link{get_workouts_data}}
+#' Requests are authenticated with a bearer token provided via the \code{PELOTON_BEARER_TOKEN} environment variable. You can
+#' add the token to your \code{~/.Renviron} file to make it available in each R session.
 #'
 #' @export
-#' @param path API endpoint to query
-#' @param print_path Show path/endpoint queried
-#' @param ... Additional parameters passed onto methods
+#' @param path API endpoint to query (include the leading \code{/})
+#' @param query Optional named list of query parameters to include
+#' @param ... Additional parameters passed on to \code{httr::GET}
 #' @examples
 #' \dontrun{
-#' peloton_auth()
-#' peloton_api("api/me")
+#' peloton_api("/api/me")
 #' }
-#'
-peloton_api <- function(path, print_path = FALSE, ...) {
-  path <- glue::glue("{path}")
-  url <- httr::modify_url("https://api.onepeloton.com/", path = path, ...)
+peloton_api <- function(path, query = list(), ...) {
+  peloton_base <- "https://api.onepeloton.com"
 
-  if (isTRUE(print_path)) cat("api: \n", url)
+  url <- paste0(peloton_base, path)
 
-  resp <- httr::GET(url = url)
-
-  if (httr::http_type(resp) != "application/json") {
-    stop("API did not return json", call. = FALSE)
+  token <- Sys.getenv("PELOTON_BEARER_TOKEN", "")
+  if (token == "") {
+    stop("PELOTON_BEARER_TOKEN env var not set. Add it to ~/.Renviron.", call. = FALSE)
   }
 
-  parsed <- jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"), simplifyVector = FALSE)
+  res <- httr::GET(
+    url,
+    query = query,
+    httr::add_headers(
+      Authorization = paste("Bearer", token),
+      `peloton-platform` = "web"
+    ),
+    ...
+  )
 
-  if (httr::http_error(resp)) {
-    msg <- glue::glue(
-      "Peloton API request failed ({httr::status_code(resp)})
-        {parsed$message}
-        "
-    )
+  if (httr::status_code(res) >= 300) {
     stop(
-      msg,
+      "Peloton GET failed: ",
+      httr::status_code(res),
+      " for ",
+      path,
+      "\n",
+      httr::content(res, "text", encoding = "UTF-8"),
       call. = FALSE
     )
   }
 
-  structure(
-    list(
-      path = path,
-      response = resp,
-      content = parsed
-    ),
-    class = "peloton_api"
-  )
-}
-
-
-print.peloton_api <- function(x, ...) {
-  cat("<Peloton ", x$path, ">\n", sep = "")
-  utils::str(x$content)
+  jsonlite::fromJSON(httr::content(res, as = "text", encoding = "UTF-8"), simplifyVector = TRUE)
 }
