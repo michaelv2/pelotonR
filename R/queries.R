@@ -152,41 +152,25 @@ get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts
 #' get_all_workouts()
 #' }
 #'
-get_all_workouts2 <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts = 100, max_pages = Inf) {
+get_all_workouts2 <- function(num_workouts = 100, joins = "") {
   uid <- peloton_user_id()
   
-  page <- 0L
-  all_items <- list()
+  # if (userid == "") stop("Provide a userid or set an environmental variable `PELOTON_USERID`", call. = FALSE)
+  if (length(joins) > 1 || !is.character(joins)) stop("Provide joins as a length one character vector", call. = FALSE)
   
-  repeat {
-    page <- page + 1L
-    
-    dat <- peloton_api(
-      paste0("/api/user/", uid, "/workouts"),
-      query = list(
-        limit = num_workouts,
-        page = page
-        # you can add joins/filters here if needed
-      )
-    )
-    
-    items <- dat$data
-    if (length(items) == 0) break
-    
-    all_items[[length(all_items) + 1L]] <- items
-    
-    if (!is.null(dat$page_count) && page >= dat$page_count) break
-    if (page >= max_pages) break
-  }
+  workout_query <- list(
+    limit = num_workouts,
+    page = 0
+  )
   
-  if (length(all_items) == 0) {
-    return(tibble())
-  }
+  if (joins != "") workout_query$joins <- joins
   
-  workouts_raw <- dplyr::bind_rows(all_items)
+  dat <- peloton_api(
+    paste0("/api/user/", uid, "/workouts"),
+    query = workout_query
+  )
   
-  # Basic cleanup similar to pelotonR
-  workouts <- workouts_raw |>
+  workouts <- dat$data |>
     dplyr::mutate(
       start_time = lubridate::as_datetime(start_time),
       end_time   = lubridate::as_datetime(end_time),
@@ -203,14 +187,14 @@ get_all_workouts2 <- function(userid = Sys.getenv("PELOTON_USERID"), num_workout
 #' Returns data about individual workouts. A vectorized function, so accepts multiple \code{workoutIDs} at once.
 #'
 #' @export
-#' @param workout_ids WorkoutIDs
+#' @param workout_id WorkoutID
 #' @param dictionary A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done
-#' @param parse_dates Whether to try and guess which columns are dates and convert
+#' @param date_parsing Whether to try and guess which columns are dates and convert
 #' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
-#' get_workouts_data(
-#'   workout_ids = workout_ids,
+#' get_workout_data(
+#'   workout_id = workout_id,
 #'   dictionary = list(
 #'     "numeric" = c(
 #'       "v2_total_video_watch_time_seconds", "v2_total_video_buffering_seconds",
@@ -220,14 +204,16 @@ get_all_workouts2 <- function(userid = Sys.getenv("PELOTON_USERID"), num_workout
 #'   )
 #' )
 #' }
-get_workouts_data <- function(workout_ids, dictionary = list(
-                                "numeric" = c(
-                                  "v2_total_video_watch_time_seconds", "v2_total_video_buffering_seconds", "leaderboard_rank"
-                                ),
-                                "list" = c("achievement_templates")
-                              ), parse_dates = TRUE, ...) {
-  purrr::map_df(workout_ids, function(workout_id) {
-    resp <- peloton_api(path = glue::glue("/api/workout/{workout_id}"), ...)
-    parse_list_to_df(list = resp, dictionary = dictionary, parse_dates = parse_dates)
-  })
+get_workout_data <- function(workout_id, date_parsing = TRUE, dictionary = list(
+  "numeric" = c(
+    "v2_total_video_watch_time_seconds", "v2_total_video_buffering_seconds", "leaderboard_rank"
+  ),
+  "list" = c("achievement_templates")
+)) {
+  
+  dat <- peloton_api(
+    paste0("/api/workout/", workout_id)
+  )
+  
+  parse_list_to_df(my_list = dat, dictionary = dictionary, date_parsing = date_parsing)
 }
