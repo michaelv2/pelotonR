@@ -10,7 +10,7 @@
 #' get_my_info()
 #' }
 #'
-get_my_info <- function(dictionary = NULL, parse_dates = TRUE, ...) {
+get_my_info <- function(dictionary = NULL, date_parsing = TRUE, ...) {
   resp <- peloton_api("/api/me", ...)
 }
 
@@ -42,7 +42,7 @@ peloton_user_id <- function(...) {
 #' @param workout_ids WorkoutIDs
 #' @param every_n How often measurements are reported. If set to 1, there will be 60 data points per minute of a workout
 #' @param dictionary A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done
-#' @param parse_dates Whether to try and guess which columns are dates and convert
+#' @param date_parsing Whether to try and guess which columns are dates and convert
 #' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
@@ -54,7 +54,7 @@ peloton_user_id <- function(...) {
 #' )
 #' }
 #'
-get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("list" = c("seconds_since_pedaling_start", "segment_list")), parse_dates = TRUE, ...) {
+get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("list" = c("seconds_since_pedaling_start", "segment_list")), date_parsing = TRUE, ...) {
   purrr::map_df(workout_ids, function(workout_id) {
     resp <- peloton_api(
       path = glue::glue("/api/workout/{workout_id}/performance_graph"),
@@ -64,7 +64,7 @@ get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("
       ...
     )
 
-    parse_list_to_df(resp, dictionary = dictionary, parse_dates = parse_dates) %>%
+    parse_list_to_df(resp, dictionary = dictionary, date_parsing = date_parsing) %>%
       dplyr::mutate(
         id = workout_id
       )
@@ -82,7 +82,7 @@ get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("
 #' @param num_workouts num_workouts
 #' @param joins additional joins to make on the data (e.g. `ride` or `ride.instructor`, concatenated as a single string. Results in many additional columns being added to the data.frame)
 #' @param dictionary A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done
-#' @param parse_dates Whether to try and guess which columns are dates and convert
+#' @param date_parsing Whether to try and guess which columns are dates and convert
 #' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
@@ -97,7 +97,7 @@ get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("
 #' )
 #' }
 #'
-get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts = 20, joins = "", dictionary = list("numeric" = c("v2_total_video_buffering_seconds", "v2_total_video_watch_time_seconds")), parse_dates = TRUE, ...) {
+get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts = 20, joins = "", dictionary = list("numeric" = c("v2_total_video_buffering_seconds", "v2_total_video_watch_time_seconds")), date_parsing = TRUE, ...) {
   if (userid == "") stop("Provide a userid or set an environmental variable `PELOTON_USERID`", call. = FALSE)
   if (length(joins) > 1 || !is.character(joins)) stop("Provide joins as a length one character vector", call. = FALSE)
 
@@ -117,12 +117,12 @@ get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts
   n_workouts <- length(workouts$data)
   # v2_total_video_buffering_seconds v2_total_video_watch_time_seconds
   if (n_workouts > 0) {
-    workouts <- purrr::map_df(1:n_workouts, ~ parse_list_to_df(workouts$data[[.]], dictionary = dictionary, parse_dates = parse_dates))
+    workouts <- purrr::map_df(1:n_workouts, ~ parse_list_to_df(workouts$data[[.]], dictionary = dictionary, date_parsing = date_parsing))
 
     # IF JOIN PARAM is specified, get data out for ride list and add it to that row
     if (joins != "") {
       rides <- purrr::map_df(1:n_workouts, function(x) {
-        parse_list_to_df(stats::setNames(workouts$ride[[x]], paste0("ride_", names(workouts$ride[[x]]))), dictionary = dictionary, parse_dates = parse_dates, ...)
+        parse_list_to_df(stats::setNames(workouts$ride[[x]], paste0("ride_", names(workouts$ride[[x]]))), dictionary = dictionary, date_parsing = date_parsing, ...)
       })
 
       dplyr::left_join(
