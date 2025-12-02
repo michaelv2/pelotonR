@@ -5,18 +5,18 @@
 #'
 #' @export
 #' @param list The JSON content of a response (aka a named list in R)
-#' @param parse_dates Whether to turn epoch timestamps into datetimes
+#' @param date_parsing Whether to turn epoch timestamps into datetimes
 #' @param dictionary A dict
 #' @examples
 #' \dontrun{
 #' parse_list_to_df(peloton_api("api/me")$content)
 #' }
 #'
-parse_list_to_df <- function(list, parse_dates, dictionary) {
-  names <- names(list)
-  m <- stats::setNames(dplyr::as_tibble(as.data.frame(matrix(nrow = 1L, ncol = length(names)))), names)
-  for (column in seq_along(names)) {
-    val <- list[[column]]
+parse_list_to_df <- function(list, date_parsing, dictionary) {
+  my_names <- names(my_list)
+  m <- stats::setNames(dplyr::as_tibble(as.data.frame(matrix(nrow = 1L, ncol = length(my_names)))), my_names)
+  for (column in seq_along(my_names)) {
+    val <- my_list[[column]]
     if (is.null(val) || length(val) == 0) {
       val <- NA_character_
     } else if (is.list(val) && (!length(val) == 0)) {
@@ -26,7 +26,7 @@ parse_list_to_df <- function(list, parse_dates, dictionary) {
     }
     m[[column]] <- val
   }
-  if (parse_dates) m <- parse_dates(m)
+  if (date_parsing) m <- parse_dates(m)
   if (!is.null(dictionary)) m <- update_types(m, dictionary)
   m
 }
