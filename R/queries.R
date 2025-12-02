@@ -1,7 +1,7 @@
 #' Makes a request against the \code{api/me} endpoint
 #'
 #'
-#' Returns user metadata, including userid, email, account status, etc.  \code{userid} is particularly useful since you need it for \code{\link{get_workouts_data}}.
+#' Returns user metadata, including userid, email, account status, etc.  \code{userid} is particularly useful since you need it for \code{\link{get_workout_data}}.
 #'
 #' @export
 #' @param ... Other arguments passed on to methods
