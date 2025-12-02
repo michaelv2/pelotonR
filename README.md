@@ -33,7 +33,7 @@ To locate your bearer token, from a browser:
 8. Then reload in R: `readRenviron("~/.Renviron").
 9. This may need to be reloaded periodically whenever Peloton expires it. 
 
-    <img width="700" height="231" alt="image" src="https://github.com/user-attachments/assets/0d959d49-cea5-4fb6-8c28-37249bbfdcff" />
+<img width="700" height="231" alt="image" src="https://github.com/user-attachments/assets/0d959d49-cea5-4fb6-8c28-37249bbfdcff" />
 
 #### Data Available
 
