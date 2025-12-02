@@ -12,6 +12,7 @@
 #'
 get_my_info <- function(dictionary = NULL, date_parsing = TRUE, ...) {
   resp <- peloton_api("/api/me", ...)
+  resp
 }
 
 
