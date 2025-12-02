@@ -3,6 +3,7 @@
 export("%>%")
 export(get_all_workouts)
 export(get_my_info)
+export(peloton_user_id)
 export(get_performance_graphs)
 export(get_workout_data)
 export(parse_dates)
