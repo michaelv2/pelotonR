@@ -22,6 +22,20 @@ devtools::install_github("bweiher/pelotonR")
 
 Set the `PELOTON_BEARER_TOKEN` environment variable. Adding it to your `~/.Renviron` file will make it available in each R session. No login helper is required once the token is present.
 
+To locate your bearer token, from a browser:
+
+1. Log in at https://members.onepeloton.com.
+2. Open Dev Tools -> **Network** tab
+3. Filter by `api.me`.
+4. Click the request that returns `200`.
+5. In the **Request Headers** section, find `Authorization: Bearer eyJ...`.
+6. Copy **only** the token part after `Bearer` (the long `eyJ...` string).
+7. Put that in your `~/.Renviron` as e.g.: `PELOTON_BEARER_TOKEN=eyJ...long_token_here...
+8. Then reload in R: `readRenviron("~/.Renviron").
+9. This may need to be reloaded periodically whenever Peloton expires it. 
+
+<img width="985" height="325" alt="image" src="https://github.com/user-attachments/assets/0d959d49-cea5-4fb6-8c28-37249bbfdcff" />
+
 #### Data Available
 
 The main endpoints each have their own helper function that helps parse the API response into a `tibble`, as well as iterating through multiple inputs if necessary.
