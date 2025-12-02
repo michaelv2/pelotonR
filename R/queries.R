@@ -153,32 +153,53 @@ get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts
 #' get_all_workouts()
 #' }
 #'
-get_all_workouts2 <- function(num_workouts = 100, joins = "") {
+get_all_workouts2 <- function(limit_per_page = 100, max_pages = Inf, joins = "") {
   uid <- peloton_user_id()
   
   # if (userid == "") stop("Provide a userid or set an environmental variable `PELOTON_USERID`", call. = FALSE)
   if (length(joins) > 1 || !is.character(joins)) stop("Provide joins as a length one character vector", call. = FALSE)
+
+  page <- 0L
+  all_items <- list()
   
   workout_query <- list(
-    limit = num_workouts,
-    page = 0
+    limit = limit_per_page,
+    page = page
   )
   
   if (joins != "") workout_query$joins <- joins
+
+  repeat {
+    page <- page + 1L
+    
+    dat <- peloton_api(
+      paste0("/api/user/", uid, "/workouts"),
+      query = list(
+        limit = limit_per_page,
+        page  = page
+      )
+    )
+    
+    items <- dat$data
+    if (length(items) == 0) break
+    
+    all_items[[length(all_items) + 1L]] <- items
+    
+    if (!is.null(dat$page_count) && page >= dat$page_count) break
+    if (page >= max_pages) break
+  }
   
-  dat <- peloton_api(
-    paste0("/api/user/", uid, "/workouts"),
-    query = workout_query
-  )
-  
-  workouts <- dat$data |>
+  if (length(all_items) == 0) {
+    return(tibble::tibble())
+  }
+
+  workouts_raw <- dplyr::bind_rows(all_items)
+  workouts_raw |>
     dplyr::mutate(
       start_time = lubridate::as_datetime(start_time),
       end_time   = lubridate::as_datetime(end_time),
       created_at = lubridate::as_datetime(created_at)
     )
-  
-  workouts
 }
 
 
