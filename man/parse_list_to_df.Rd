@@ -4,14 +4,14 @@
 \alias{parse_list_to_df}
 \title{Parse the \code{JSON} content of a response and turn the result into a \code{tibble} .}
 \usage{
-parse_list_to_df(list, date_parsing, dictionary)
+parse_list_to_df(my_list, date_parsing, dictionary)
 }
 \arguments{
-\item{list}{The JSON content of a response (aka a named list in R)}
+\item{my_list}{The JSON content of a response (aka a named list in R)}
 
 \item{date_parsing}{Whether to turn epoch timestamps into datetimes}
 
-\item{dictionary}{A dict}
+\item{dictionary}{A named list mapping data types to column names for type coercion}
 }
 \description{
 A helper, agnostic function to parse the content of API responses made to Peloton's API. Leaves most datatypes alone, but converts nested lists into list-columns.

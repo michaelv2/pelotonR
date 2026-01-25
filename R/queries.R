@@ -4,6 +4,8 @@
 #' Returns user metadata, including userid, email, account status, etc.  \code{userid} is particularly useful since you need it for \code{\link{get_workout_data}}.
 #'
 #' @export
+#' @param dictionary A named list mapping data types to column names for type coercion. If \code{NULL} (default), no type coercion is done.
+#' @param date_parsing Whether to try and guess which columns are dates and convert (default \code{TRUE})
 #' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
@@ -56,7 +58,7 @@ peloton_user_id <- function(...) {
 #' }
 #'
 get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("list" = c("seconds_since_pedaling_start", "segment_list")), date_parsing = TRUE, ...) {
-  purrr::map_df(workout_ids, function(workout_id) {
+  purrr::map(workout_ids, function(workout_id) {
     resp <- peloton_api(
       path = glue::glue("/api/workout/{workout_id}/performance_graph"),
       query = list(
@@ -65,141 +67,146 @@ get_performance_graphs <- function(workout_ids, every_n = 5, dictionary = list("
       ...
     )
 
-    parse_list_to_df(resp, dictionary = dictionary, date_parsing = date_parsing) %>%
+    parse_list_to_df(resp, dictionary = dictionary, date_parsing = date_parsing) |>
       dplyr::mutate(
         id = workout_id
       )
-  })
+  }) |>
+    purrr::list_rbind()
 }
 
 
 #' Makes a request against the \code{api/user_id/workouts/} endpoint
 #'
 #'
-#' Lists requested number of workouts for a user, along with some metadata.
+#' Fetches workouts for a user with automatic pagination support.
+#' Combines the best of the original \code{get_all_workouts()} and
+#' \code{get_all_workouts2()} functions.
 #'
 #' @export
-#' @param userid userID
-#' @param num_workouts num_workouts
-#' @param joins additional joins to make on the data (e.g. `ride` or `ride.instructor`, concatenated as a single string. Results in many additional columns being added to the data.frame)
-#' @param dictionary A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done
-#' @param date_parsing Whether to try and guess which columns are dates and convert
-#' @param ... Other arguments passed on to methods
+#' @param userid User ID. If \code{NULL} (default), automatically fetches via \code{\link{peloton_user_id}}.
+#' @param num_workouts Maximum number of workouts to fetch. Use \code{Inf} (default) to fetch all.
+#' @param joins Additional joins to make on the data (e.g. \code{"ride"} or \code{"ride,ride.instructor"}).
+#'   Results in additional columns being added to the data.frame with \code{ride_} prefix.
+#' @param limit_per_page Number of workouts to fetch per API request (default 100).
 #' @examples
 #' \dontrun{
+#' # Fetch all workouts (auto-fetches user ID)
 #' get_all_workouts()
+#'
+#' # Fetch only 10 workouts
+#' get_all_workouts(num_workouts = 10)
+#'
+#' # Include ride and instructor data
 #' get_all_workouts(joins = "ride,ride.instructor")
-#' # if you run into parsing errors, sometimes helpful to manual override
-#' workouts <- get_all_workouts(user_id,
-#'   dictionary = list(
-#'     "numeric" =
-#'       c("v2_total_video_buffering_seconds", "v2_total_video_watch_time_seconds")
-#'   )
-#' )
+#'
+#' # Specify user ID explicitly
+#' get_all_workouts(userid = "your_user_id")
 #' }
 #'
-get_all_workouts <- function(userid = Sys.getenv("PELOTON_USERID"), num_workouts = 20, joins = "", dictionary = list("numeric" = c("v2_total_video_buffering_seconds", "v2_total_video_watch_time_seconds")), date_parsing = TRUE, ...) {
-  if (userid == "") stop("Provide a userid or set an environmental variable `PELOTON_USERID`", call. = FALSE)
-  if (length(joins) > 1 || !is.character(joins)) stop("Provide joins as a length one character vector", call. = FALSE)
+get_all_workouts <- function(
+    userid = NULL,
+    num_workouts = Inf,
+    joins = "",
+    limit_per_page = 100
+) {
+  # Auto-fetch userid if not provided
+  if (is.null(userid) || userid == "") {
+    userid <- peloton_user_id()
+  }
 
-  # see if joins is provided, if so, append to request
-  workout_query <- list(
-    limit = num_workouts,
-    page = 0
-  )
+  # Validate userid is not empty
+  if (is.null(userid) || userid == "") {
+    stop("userid is empty. Provide a userid or ensure peloton_user_id() returns a valid ID.", call. = FALSE)
+  }
 
+  # Validation
+  if (length(joins) > 1 || !is.character(joins)) {
+    stop("Provide joins as a length one character vector", call. = FALSE)
+  }
+
+  # Build query with joins support
+  workout_query <- list(limit = limit_per_page, page = 0L)
   if (joins != "") workout_query$joins <- joins
 
-  workouts <- peloton_api(
-    glue::glue("/api/user/{userid}/workouts"),
-    query = workout_query,
-    ...
-  )
-  n_workouts <- length(workouts$data)
-  # v2_total_video_buffering_seconds v2_total_video_watch_time_seconds
-  if (n_workouts > 0) {
-    workouts <- purrr::map_df(1:n_workouts, ~ parse_list_to_df(workouts$data[[.]], dictionary = dictionary, date_parsing = date_parsing))
+  # Pagination loop
+  all_items <- list()
+  page <- 0L
+  total_fetched <- 0L
 
-    # IF JOIN PARAM is specified, get data out for ride list and add it to that row
-    if (joins != "") {
-      rides <- purrr::map_df(1:n_workouts, function(x) {
-        parse_list_to_df(stats::setNames(workouts$ride[[x]], paste0("ride_", names(workouts$ride[[x]]))), dictionary = dictionary, date_parsing = date_parsing, ...)
-      })
+  repeat {
+    page <- page + 1L
+    workout_query$page <- page
 
-      dplyr::left_join(
-        dplyr::mutate(workouts, rn = dplyr::row_number()),
-        dplyr::mutate(rides, rn = dplyr::row_number()),
-        by  = "rn"
-      ) %>%
-        dplyr::select(-.data$rn)
-    } else {
-      workouts
-    }
+    resp <- peloton_api(
+      paste0("/api/user/", userid, "/workouts"),
+      query = workout_query
+    )
+
+    items <- resp$data
+    if (length(items) == 0) break
+
+    all_items[[length(all_items) + 1L]] <- items
+    total_fetched <- total_fetched + length(items)
+
+    if (!is.null(resp$page_count) && page >= resp$page_count) break
+    if (total_fetched >= num_workouts) break
   }
+
+  if (length(all_items) == 0) return(tibble::tibble())
+
+  # Simple bind_rows parsing
+  workouts <- dplyr::bind_rows(all_items)
+
+  # Parse known date columns
+  date_cols <- intersect(c("start_time", "end_time", "created_at"), names(workouts))
+  for (col in date_cols) {
+    workouts[[col]] <- lubridate::as_datetime(workouts[[col]])
+  }
+
+  # Handle joins - extract and merge ride data
+  if (joins != "" && "ride" %in% names(workouts)) {
+    rides <- dplyr::bind_rows(workouts$ride)
+    names(rides) <- paste0("ride_", names(rides))
+    workouts <- dplyr::bind_cols(
+      dplyr::select(workouts, -"ride"),
+      rides
+    )
+  }
+
+  # Trim to requested number
+  if (is.finite(num_workouts) && nrow(workouts) > num_workouts) {
+    workouts <- workouts[seq_len(num_workouts), ]
+  }
+
+  workouts
 }
 
 
-#' Makes a request against the \code{api/user_id/workouts/} endpoint
+#' Deprecated: Use \code{\link{get_all_workouts}} instead
 #'
-#'
-#' Lists requested number of workouts for a user, along with some metadata.
+#' This function is deprecated. Use \code{\link{get_all_workouts}} which now
+#' includes all the features of \code{get_all_workouts2()} including automatic
+#' pagination and user ID auto-fetch.
 #'
 #' @export
-#' @param userid userID
-#' @param num_workouts num_workouts
-#' @param ... Other arguments passed on to methods
+#' @param limit_per_page Number of workouts to fetch per API request (default 100)
+#' @param max_pages Maximum number of pages to fetch. Use \code{Inf} (default) to fetch all workouts.
+#' @param joins Additional joins (e.g., "ride,ride.instructor")
 #' @examples
 #' \dontrun{
+#' # Use get_all_workouts() instead
 #' get_all_workouts()
 #' }
 #'
 get_all_workouts2 <- function(limit_per_page = 100, max_pages = Inf, joins = "") {
-  uid <- peloton_user_id()
-  
-  # if (userid == "") stop("Provide a userid or set an environmental variable `PELOTON_USERID`", call. = FALSE)
-  if (length(joins) > 1 || !is.character(joins)) stop("Provide joins as a length one character vector", call. = FALSE)
-
-  page <- 0L
-  all_items <- list()
-  
-  workout_query <- list(
-    limit = limit_per_page,
-    page = page
+  .Deprecated("get_all_workouts")
+  get_all_workouts(
+    userid = NULL,
+    num_workouts = max_pages * limit_per_page,
+    joins = joins,
+    limit_per_page = limit_per_page
   )
-  
-  if (joins != "") workout_query$joins <- joins
-
-  repeat {
-    page <- page + 1L
-    
-    dat <- peloton_api(
-      paste0("/api/user/", uid, "/workouts"),
-      query = list(
-        limit = limit_per_page,
-        page  = page
-      )
-    )
-    
-    items <- dat$data
-    if (length(items) == 0) break
-    
-    all_items[[length(all_items) + 1L]] <- items
-    
-    if (!is.null(dat$page_count) && page >= dat$page_count) break
-    if (page >= max_pages) break
-  }
-  
-  if (length(all_items) == 0) {
-    return(tibble::tibble())
-  }
-
-  workouts_raw <- dplyr::bind_rows(all_items)
-  workouts_raw |>
-    dplyr::mutate(
-      start_time = lubridate::as_datetime(start_time),
-      end_time   = lubridate::as_datetime(end_time),
-      created_at = lubridate::as_datetime(created_at)
-    )
 }
 
 
@@ -212,7 +219,6 @@ get_all_workouts2 <- function(limit_per_page = 100, max_pages = Inf, joins = "")
 #' @param workout_id WorkoutID
 #' @param dictionary A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done
 #' @param date_parsing Whether to try and guess which columns are dates and convert
-#' @param ... Other arguments passed on to methods
 #' @examples
 #' \dontrun{
 #' get_workout_data(

@@ -4,17 +4,17 @@
 \alias{get_my_info}
 \title{Makes a request against the \code{api/me} endpoint}
 \usage{
-get_my_info(dictionary = NULL, parse_dates = TRUE, ...)
+get_my_info(dictionary = NULL, date_parsing = TRUE, ...)
 }
 \arguments{
-\item{dictionary}{A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done}
+\item{dictionary}{A named list mapping data types to column names for type coercion. If \code{NULL} (default), no type coercion is done.}
 
-\item{parse_dates}{Whether to try and guess which columns are dates and convert}
+\item{date_parsing}{Whether to try and guess which columns are dates and convert (default \code{TRUE})}
 
 \item{...}{Other arguments passed on to methods}
 }
 \description{
-Returns user metadata, including userid, email, account status, etc.  \code{userid} is particularly useful since you need it for \code{\link{get_workouts_data}}.
+Returns user metadata, including userid, email, account status, etc.  \code{userid} is particularly useful since you need it for \code{\link{get_workout_data}}.
 }
 \examples{
 \dontrun{

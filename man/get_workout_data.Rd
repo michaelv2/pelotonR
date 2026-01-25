@@ -5,22 +5,19 @@
 \title{Makes a request against the \code{api/workout/workout_id} endpoint}
 \usage{
 get_workout_data(
-  workout_ids,
+  workout_id,
+  date_parsing = TRUE,
   dictionary = list(numeric = c("v2_total_video_watch_time_seconds",
     "v2_total_video_buffering_seconds", "leaderboard_rank"), list =
-    c("achievement_templates")),
-  parse_dates = TRUE,
-  ...
+    c("achievement_templates"))
 )
 }
 \arguments{
-\item{workout_ids}{WorkoutIDs}
+\item{workout_id}{WorkoutID}
+
+\item{date_parsing}{Whether to try and guess which columns are dates and convert}
 
 \item{dictionary}{A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done}
-
-\item{parse_dates}{Whether to try and guess which columns are dates and convert}
-
-\item{...}{Other arguments passed on to methods}
 }
 \description{
 Returns data about individual workouts. A vectorized function, so accepts multiple \code{workoutIDs} at once.
@@ -28,7 +25,7 @@ Returns data about individual workouts. A vectorized function, so accepts multip
 \examples{
 \dontrun{
 get_workout_data(
-  workout_ids = workout_ids,
+  workout_id = workout_id,
   dictionary = list(
     "numeric" = c(
       "v2_total_video_watch_time_seconds", "v2_total_video_buffering_seconds",

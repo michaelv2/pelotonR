@@ -5,42 +5,40 @@
 \title{Makes a request against the \code{api/user_id/workouts/} endpoint}
 \usage{
 get_all_workouts(
-  userid = Sys.getenv("PELOTON_USERID"),
-  num_workouts = 20,
+  userid = NULL,
+  num_workouts = Inf,
   joins = "",
-  dictionary = list(numeric = c("v2_total_video_buffering_seconds",
-    "v2_total_video_watch_time_seconds")),
-  parse_dates = TRUE,
-  ...
+  limit_per_page = 100
 )
 }
 \arguments{
-\item{userid}{userID}
+\item{userid}{User ID. If \code{NULL} (default), automatically fetches via \code{\link{peloton_user_id}}.}
 
-\item{num_workouts}{num_workouts}
+\item{num_workouts}{Maximum number of workouts to fetch. Use \code{Inf} (default) to fetch all.}
 
-\item{joins}{additional joins to make on the data (e.g. `ride` or `ride.instructor`, concatenated as a single string. Results in many additional columns being added to the data.frame)}
+\item{joins}{Additional joins to make on the data (e.g. \code{"ride"} or \code{"ride,ride.instructor"}).
+Results in additional columns being added to the data.frame with \code{ride_} prefix.}
 
-\item{dictionary}{A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done}
-
-\item{parse_dates}{Whether to try and guess which columns are dates and convert}
-
-\item{...}{Other arguments passed on to methods}
+\item{limit_per_page}{Number of workouts to fetch per API request (default 100).}
 }
 \description{
-Lists requested number of workouts for a user, along with some metadata.
+Fetches workouts for a user with automatic pagination support.
+Combines the best of the original \code{get_all_workouts()} and
+\code{get_all_workouts2()} functions.
 }
 \examples{
 \dontrun{
+# Fetch all workouts (auto-fetches user ID)
 get_all_workouts()
+
+# Fetch only 10 workouts
+get_all_workouts(num_workouts = 10)
+
+# Include ride and instructor data
 get_all_workouts(joins = "ride,ride.instructor")
-# if you run into parsing errors, sometimes helpful to manual override
-workouts <- get_all_workouts(user_id,
-  dictionary = list(
-    "numeric" =
-      c("v2_total_video_buffering_seconds", "v2_total_video_watch_time_seconds")
-  )
-)
+
+# Specify user ID explicitly
+get_all_workouts(userid = "your_user_id")
 }
 
 }

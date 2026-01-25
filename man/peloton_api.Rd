@@ -14,15 +14,16 @@ peloton_api(path, query = list(), ...)
 \item{...}{Additional parameters passed on to \code{httr::GET}}
 }
 \description{
-Users need not invoke this method directly and may instead use one of the wrappers around specific endpoints that also vectorize
-inputs and process the data returned, such as \code{\link{get_my_info}}, \code{\link{get_performance_graphs}}, \code{\link{get_all_workouts}}, \code{\link{get_workouts_data}}.
-
-Requests are authenticated with a bearer token provided via the \code{PELOTON_BEARER_TOKEN} environment variable. You can add
-the token to your \code{~/.Renviron} file to make it available in each R session.
+Users need not invoke this method directly and may instead use one of the wrappers around specific endpoints that also
+vectorize inputs and process the data returned, such as \code{\link{get_my_info}}, \code{\link{get_performance_graphs}},
+\code{\link{get_all_workouts}}, \code{\link{get_workout_data}}.
+}
+\details{
+Requests are authenticated with a bearer token provided via the \code{PELOTON_BEARER_TOKEN} environment variable. You can
+add the token to your \code{~/.Renviron} file to make it available in each R session.
 }
 \examples{
 \dontrun{
 peloton_api("/api/me")
 }
-
 }

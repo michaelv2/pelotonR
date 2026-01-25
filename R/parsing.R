@@ -4,25 +4,46 @@
 #' A helper, agnostic function to parse the content of API responses made to Peloton's API. Leaves most datatypes alone, but converts nested lists into list-columns.
 #'
 #' @export
-#' @param list The JSON content of a response (aka a named list in R)
+#' @param my_list The JSON content of a response (aka a named list in R)
 #' @param date_parsing Whether to turn epoch timestamps into datetimes
-#' @param dictionary A dict
+#' @param dictionary A named list mapping data types to column names for type coercion
 #' @examples
 #' \dontrun{
 #' parse_list_to_df(peloton_api("api/me")$content)
 #' }
 #'
 parse_list_to_df <- function(my_list, date_parsing, dictionary) {
+  # Guard against NULL or empty input
+  if (is.null(my_list) || length(my_list) == 0) {
+    return(tibble::tibble())
+  }
+
   my_names <- names(my_list)
+
+  # Skip unnamed lists - they can't be combined meaningfully with named data
+  if (is.null(my_names) || all(my_names == "")) {
+    return(tibble::tibble())
+  }
+
+  # Ensure all names are character and handle partial naming
+  my_names <- as.character(my_names)
+  # Filter out elements with empty names
+  valid_idx <- my_names != "" & !is.na(my_names)
+  my_list <- my_list[valid_idx]
+  my_names <- my_names[valid_idx]
+
+  if (length(my_names) == 0) {
+    return(tibble::tibble())
+  }
+
   m <- stats::setNames(dplyr::as_tibble(as.data.frame(matrix(nrow = 1L, ncol = length(my_names)))), my_names)
   for (column in seq_along(my_names)) {
     val <- my_list[[column]]
     if (is.null(val) || length(val) == 0) {
       val <- NA_character_
-    } else if (is.list(val) && (!length(val) == 0)) {
+    } else if (is.list(val) || length(val) > 1) {
+      # Wrap lists and multi-element vectors as list-columns
       val <- list(val)
-    } else {
-      m[[column]] <- val
     }
     m[[column]] <- val
   }
@@ -50,15 +71,18 @@ parse_dates <- function(dataframe, tz = base::Sys.timezone()) {
   fn <- function(x, ...) {
     as.POSIXct(x, origin = "1970-01-01", tz)
   }
-  names <- names(dataframe)
-  true <- logical(length = length(names))
-  for (i in seq_along(names)) {
-    name <- names[i]
+  col_names <- names(dataframe)
+  true <- logical(length = length(col_names))
+  for (i in seq_along(col_names)) {
+    name <- col_names[i]
     # TODO parse inner list too
     true[[i]] <- grepl(pattern = "^1[0-9]{9}", x = dataframe[[name]]) && !is.list(dataframe[[name]]) && !name %in% exclude_
   }
-  vars <- names[true]
-  dplyr::mutate_at(dataframe, vars, fn)
+  vars <- col_names[true]
+  if (length(vars) == 0) {
+    return(dataframe)
+  }
+  dplyr::mutate(dataframe, dplyr::across(dplyr::all_of(vars), fn))
 }
 
 

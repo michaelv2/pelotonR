@@ -8,7 +8,7 @@ get_performance_graphs(
   workout_ids,
   every_n = 5,
   dictionary = list(list = c("seconds_since_pedaling_start", "segment_list")),
-  parse_dates = TRUE,
+  date_parsing = TRUE,
   ...
 )
 }
@@ -19,7 +19,7 @@ get_performance_graphs(
 
 \item{dictionary}{A named list. Maps a data-type to a column name. If \code{NULL} then no parsing is done}
 
-\item{parse_dates}{Whether to try and guess which columns are dates and convert}
+\item{date_parsing}{Whether to try and guess which columns are dates and convert}
 
 \item{...}{Other arguments passed on to methods}
 }
