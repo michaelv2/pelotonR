@@ -245,3 +245,125 @@ get_workout_data <- function(workout_id, date_parsing = TRUE, dictionary = list(
   
   parse_list_to_df(my_list = dat, dictionary = dictionary, date_parsing = date_parsing)
 }
+
+
+#' Get performance summary for workouts
+#'
+#'
+#' Extracts summary statistics from the performance_graph endpoint including
+#' duration, summaries (totals like Distance, Calories), average summaries
+#' (like Avg Pace, Avg Cadence), effort zones, and metrics. Works for any
+#' workout type (cycling, running, rowing, etc.).
+#'
+#' @export
+#' @param workout_ids One or more workout IDs
+#' @param ... Additional arguments passed to \code{\link{peloton_api}}
+#' @return A tibble with one row per workout containing summary data as list-columns
+#' @examples
+#' \dontrun{
+#' workouts <- get_all_workouts(num_workouts = 5)
+#' get_performance_summary(workouts$id)
+#' }
+#'
+get_performance_summary <- function(workout_ids, ...) {
+  purrr::map(workout_ids, function(workout_id) {
+    resp <- peloton_api(
+      path = glue::glue("/api/workout/{workout_id}/performance_graph"),
+      query = list(every_n = 1),
+      ...
+    )
+
+    tibble::tibble(
+      id = workout_id,
+      duration = if (!is.null(resp$duration)) resp$duration else NA_real_,
+      summaries = list(if (!is.null(resp$summaries)) resp$summaries else list()),
+      average_summaries = list(if (!is.null(resp$average_summaries)) resp$average_summaries else list()),
+      effort_zones = list(if (!is.null(resp$effort_zones)) resp$effort_zones else list()),
+      metrics = list(if (!is.null(resp$metrics)) resp$metrics else list())
+    )
+  }) |>
+    purrr::list_rbind()
+}
+
+
+#' Get running-specific workout details
+#'
+#'
+#' A convenience wrapper around \code{\link{get_performance_summary}} that extracts
+#' running-relevant metrics: duration (in minutes), distance, pace, max pace,
+#' and heart rate zone 4/5 ratios.
+#'
+#' @export
+#' @param workout_ids One or more workout IDs (should be running workouts)
+#' @param ... Additional arguments passed to \code{\link{peloton_api}}
+#' @return A tibble with columns: \code{id}, \code{duration} (minutes), \code{distance},
+#'   \code{pace}, \code{max_pace}, \code{zone4} (ratio), \code{zone5} (ratio)
+#' @examples
+#' \dontrun{
+#' workouts <- get_all_workouts()
+#' running <- workouts[workouts$fitness_discipline == "running", ]
+#' get_run_details(running$id)
+#' }
+#'
+get_run_details <- function(workout_ids, ...) {
+  summary_data <- get_performance_summary(workout_ids, ...)
+
+  purrr::map(seq_len(nrow(summary_data)), function(i) {
+    row <- summary_data[i, ]
+
+    tibble::tibble(
+      id = row$id,
+      duration = row$duration / 60,
+      distance = extract_summary_value(row$summaries[[1]], "Distance"),
+      pace = extract_average_value(row$average_summaries[[1]], "Avg Pace"),
+      max_pace = extract_metric_max(row$metrics[[1]], "Pace"),
+      zone4 = extract_zone_ratio(row$effort_zones[[1]], row$duration, 4),
+      zone5 = extract_zone_ratio(row$effort_zones[[1]], row$duration, 5)
+    )
+  }) |>
+    purrr::list_rbind()
+}
+
+
+# Internal helpers for extracting values from performance summary data --------
+
+extract_summary_value <- function(summaries, display_name) {
+  if (is.null(summaries) || length(summaries) == 0) return(NA_real_)
+  if (is.data.frame(summaries)) {
+    idx <- which(summaries$display_name == display_name)
+    if (length(idx) == 0) return(NA_real_)
+    return(as.numeric(summaries$value[idx[1]]))
+  }
+  NA_real_
+}
+
+extract_average_value <- function(averages, display_name) {
+  if (is.null(averages) || length(averages) == 0) return(NA_real_)
+  if (is.data.frame(averages)) {
+    idx <- which(averages$display_name == display_name)
+    if (length(idx) == 0) return(NA_real_)
+    return(as.numeric(averages$value[idx[1]]))
+  }
+  NA_real_
+}
+
+extract_metric_max <- function(metrics, display_name) {
+  if (is.null(metrics) || length(metrics) == 0) return(NA_real_)
+  if (is.data.frame(metrics)) {
+    idx <- which(metrics$display_name == display_name)
+    if (length(idx) == 0) return(NA_real_)
+    return(as.numeric(metrics$max_value[idx[1]]))
+  }
+  NA_real_
+}
+
+extract_zone_ratio <- function(effort_zones, duration, zone_num) {
+  if (is.null(effort_zones) || length(effort_zones) == 0) return(NA_real_)
+  if (is.null(duration) || is.na(duration) || duration == 0) return(NA_real_)
+  durations <- effort_zones$heart_rate_zone_durations
+  if (is.null(durations)) return(NA_real_)
+  zone_key <- paste0("heart_rate_z", zone_num, "_duration")
+  zone_val <- durations[[zone_key]]
+  if (is.null(zone_val)) return(NA_real_)
+  as.numeric(zone_val) / as.numeric(duration)
+}
