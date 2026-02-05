@@ -4,23 +4,39 @@
 \alias{peloton_setup_token}
 \title{Set up Peloton bearer token interactively}
 \usage{
-peloton_setup_token(open_browser = TRUE)
+peloton_setup_token(method = c("auto", "chromote", "node", "manual"))
 }
 \arguments{
-\item{open_browser}{Logical. If \code{TRUE} (the default), opens the Peloton
-website in the default browser.}
+\item{method}{Character. One of \code{"auto"} (default), \code{"chromote"},
+\code{"node"}, or \code{"manual"}. With \code{"auto"}, tries chromote first,
+then Node.js, then falls back to manual instructions.}
 }
 \value{
 Invisibly returns \code{TRUE} if the token was successfully saved,
   \code{FALSE} otherwise.
 }
 \description{
-Opens the Peloton website and guides the user through extracting their
-bearer token. The token is saved to \code{~/.Renviron} and loaded into
-the current session.
+Captures your Peloton bearer token by launching a browser and intercepting
+the \code{Authorization} header from live API requests. Peloton uses Auth0,
+which stores tokens in memory (not localStorage), so a live browser session
+is needed.
+}
+\details{
+Three methods are available:
+\describe{
+  \item{\code{"chromote"}}{(Recommended) Uses the \pkg{chromote} R package to
+    launch a headed Chrome session and listen for the Authorization header.
+    Requires \pkg{chromote} and a Chrome/Chromium installation.}
+  \item{\code{"node"}}{Uses Node.js with Playwright to launch a browser and
+    capture the token. Requires \code{node} and \code{playwright} to be
+    installed.}
+  \item{\code{"manual"}}{Prints instructions for manually copying the token
+    from browser DevTools, then prompts for the value.}
+}
 }
 \examples{
 \dontrun{
 peloton_setup_token()
+peloton_setup_token(method = "manual")
 }
 }

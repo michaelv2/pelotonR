@@ -6,6 +6,15 @@
 
 <!-- badges: end -->
 
+> **Note (February 2025):** Peloton migrated authentication to Auth0, which
+> stores access tokens in memory rather than localStorage or cookies. The old
+> bookmarklet method of extracting your bearer token no longer works.
+> `peloton_setup_token()` has been updated to automatically capture the token
+> by launching a browser and intercepting the Authorization header from live
+> API requests. Install the `chromote` R package for the best experience, or
+> have Node.js + Playwright available as an alternative. A manual Network tab
+> fallback is also provided.
+
 `pelotonR` provides an `R` interface into the Peloton data API. The package handles authentication, response parsing, and provides helper functions to find and extract data from the most important endpoints.
 
 ## Installation
@@ -26,10 +35,13 @@ peloton_setup_token()
 ```
 
 This will:
-1. Open the Peloton website in your browser
-2. Provide a bookmarklet to extract your token from localStorage
+1. Launch a browser window to the Peloton login page
+2. Automatically capture your bearer token when you log in
 3. Save the token to `~/.Renviron` automatically
 4. Load the token into your current R session
+
+Requires `chromote` (recommended) or Node.js + Playwright.
+Falls back to manual Network tab instructions if neither is available.
 
 ## Overview
 
@@ -43,15 +55,15 @@ Set the `PELOTON_BEARER_TOKEN` environment variable. Adding it to your `~/.Renvi
 To locate your bearer token manually, from a browser:
 
 1. Log in at https://members.onepeloton.com.
-2. Open Dev Tools -> **Network** tab
-3. Filter by `api.me` and select one of the requests that returned `200`.
-5. In the **Request Headers** section, find `Authorization: Bearer eyJ...`.
-6. Copy **only** the token part after `Bearer` (the long `eyJ...` string).
-7. Put that in your `~/.Renviron` as e.g.: `PELOTON_BEARER_TOKEN=eyJ...long_token_here...`
-8. Then reload in R: `readRenviron("~/.Renviron")`
-9. This may need to be reloaded periodically whenever Peloton expires it.
-
-<img width="600" height="198" alt="image" src="https://github.com/user-attachments/assets/0d959d49-cea5-4fb6-8c28-37249bbfdcff" />
+2. Open Dev Tools (F12 or Cmd+Option+I) -> **Network** tab
+3. Filter requests to `api.onepeloton.com`
+4. Click around the page to trigger some API requests
+5. Click any request to `api.onepeloton.com`
+6. In the **Request Headers** section, find `Authorization: Bearer eyJ...`.
+7. Copy **only** the token part after `Bearer` (the long `eyJ...` string).
+8. Put that in your `~/.Renviron` as e.g.: `PELOTON_BEARER_TOKEN=eyJ...long_token_here...`
+9. Then reload in R: `readRenviron("~/.Renviron")`
+10. This may need to be refreshed periodically whenever Peloton expires it.
 
 </details>
 
