@@ -1,5 +1,7 @@
 # pelotonR
 
+> Forked from [bweiher/pelotonR](https://github.com/bweiher/pelotonR)
+
 <!-- badges: start -->
 
 [![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
@@ -47,12 +49,14 @@ Falls back to manual Network tab instructions if neither is available.
 
 #### **Authentication**
 
-Set the `PELOTON_BEARER_TOKEN` environment variable. Adding it to your `~/.Renviron` file will make it available in each R session. No login helper is required once the token is present.
+All API requests require a bearer token. Peloton uses Auth0 for authentication, which stores access tokens in memory (not in localStorage or cookies). The recommended way to obtain your token is with `peloton_setup_token()`, which launches a browser and captures the token automatically.
+
+Once saved, the `PELOTON_BEARER_TOKEN` environment variable in `~/.Renviron` is loaded automatically in each R session. Tokens may need to be refreshed periodically when Peloton expires them.
 
 <details>
 <summary>Manual setup instructions (click to expand)</summary>
 
-To locate your bearer token manually, from a browser:
+If you prefer to extract the token manually:
 
 1. Log in at https://members.onepeloton.com.
 2. Open Dev Tools (F12 or Cmd+Option+I) -> **Network** tab
@@ -61,9 +65,8 @@ To locate your bearer token manually, from a browser:
 5. Click any request to `api.onepeloton.com`
 6. In the **Request Headers** section, find `Authorization: Bearer eyJ...`.
 7. Copy **only** the token part after `Bearer` (the long `eyJ...` string).
-8. Put that in your `~/.Renviron` as e.g.: `PELOTON_BEARER_TOKEN=eyJ...long_token_here...`
-9. Then reload in R: `readRenviron("~/.Renviron")`
-10. This may need to be refreshed periodically whenever Peloton expires it.
+8. Add to your `~/.Renviron`: `PELOTON_BEARER_TOKEN=eyJ...long_token_here...`
+9. Reload in R: `readRenviron("~/.Renviron")`
 
 </details>
 
