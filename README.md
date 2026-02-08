@@ -1,6 +1,6 @@
 # pelotonR
 
-> Forked from [bweiher/pelotonR](https://github.com/bweiher/pelotonR)
+Forked from [bweiher/pelotonR](https://github.com/bweiher/pelotonR)
 
 <!-- badges: start -->
 
