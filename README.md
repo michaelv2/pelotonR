@@ -21,7 +21,7 @@ Forked from [bweiher/pelotonR](https://github.com/bweiher/pelotonR)
 
 ## Installation
 
-Currently on [Github](https://github.com/bweiher/pelotonR) only. Install with:
+Currently on [Github](https://github.com/michaelv2/pelotonR) only. Install with:
 
 ``` r
 devtools::install_github("bweiher/pelotonR")
